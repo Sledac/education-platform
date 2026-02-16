@@ -1,0 +1,15 @@
+{
+  "task": "count-pods",
+    "description": "Count running pods",
+    "setup": {
+      "pods":[
+      {
+        "name": "nginx", 
+        "image": "nginx:alpine"
+      }
+      ]
+    },
+    "validation": {
+      "value": 1
+    }
+}
