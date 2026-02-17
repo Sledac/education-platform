@@ -1,14 +1,55 @@
 package k8s
 
 import (
-	"fmt"
 	"context"
-	"time"
+	"fmt"
 	"log"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func (mng *LabManager) DeployResourse(user_id string) error {
+
+	config_setup := mng.Config.Setup
+
+	switch {
+	case len(config_setup.Pods) > 0:
+		pod := config_setup.Pods[0]
+		err := mng.Client.CreatePod(mng.Sessions[user_id].Namespace, pod.Name, pod.Image)
+		if err != nil {
+			return fmt.Errorf("Failed to create pod %s: %w", pod.Name, err)
+		} else {
+			log.Printf("\n. Ожидаем запуск пода...\n")
+			err = mng.Client.WaitForPodRunning(mng.Sessions[user_id].Namespace, pod.Name, 60)
+			if err != nil {
+				return fmt.Errorf("⚠️Error waiting Pod: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (mng *LabManager) Checker(user_id string) error {
+	var check_pods int
+	config_setup := mng.Config.Setup
+
+	if len(config_setup.Pods) > 0 {
+		number_pods, err := mng.Client.GetPodsCount(mng.Sessions[user_id].Namespace)
+		if err != nil {
+			log.Fatal("Error when getting pods")
+		}
+		log.Println("How much pod is running ?")
+		for check_pods != number_pods {
+			fmt.Scan(&check_pods)
+			fmt.Println("Wrong, try again ")
+		}
+		fmt.Printf("Exactly %v pods is running \n", check_pods)
+	}
+	return nil
+}
 
 func (c *K8SClient) CreatePod(namespace, podName, image string) error {
 	// Создаем объект Pod
@@ -44,14 +85,14 @@ func (c *K8SClient) CreatePod(namespace, podName, image string) error {
 		return fmt.Errorf("не удалось создать pod '%s': %w", podName, err)
 	}
 
-	fmt.Printf("✅ Pod '%s' создан в namespace '%s' (image: %s)\n", 
+	fmt.Printf("✅ Pod '%s' создан в namespace '%s' (image: %s)\n",
 		podName, namespace, image)
 	return nil
 }
 
 func (c *K8SClient) WaitForPodRunning(namespace, podName string, timeoutSeconds int) error {
 	ctx := context.TODO()
-	
+
 	for i := 0; i < timeoutSeconds; i++ {
 		pod, err := c.clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
@@ -60,33 +101,33 @@ func (c *K8SClient) WaitForPodRunning(namespace, podName string, timeoutSeconds 
 
 		switch pod.Status.Phase {
 		case corev1.PodRunning:
-			log.Printf("✅ Pod '%s' запущен\n", podName)
+			log.Printf("✅ Pod '%s' running in namespace '%v' \n", podName, namespace)
 			return nil
 		case corev1.PodSucceeded:
-			log.Printf("ℹ️  Pod '%s' завершился успешно\n", podName)
+			log.Printf("ℹ️ Pod '%s' completed successfully\n", podName)
 			return nil
 		case corev1.PodFailed:
-			return fmt.Errorf("pod '%s' завершился с ошибкой", podName)
+			return fmt.Errorf("Pod '%s' comleted with error", podName)
 		case corev1.PodPending:
-			log.Printf("⏳ Pod '%s' в состоянии Pending...\n", podName)
+			log.Printf("⏳ Pod '%s' in Pending state...\n", podName)
 		default:
-			log.Printf("⏳ Состояние pod '%s': %s\n", podName, pod.Status.Phase)
+			log.Printf("⏳ State Pod '%s': %s\n", podName, pod.Status.Phase)
 		}
 
 		// Ждем 1 секунду перед следующей проверкой
 		time.Sleep(1 * time.Second)
 	}
 
-	return fmt.Errorf("таймаут ожидания pod '%s'", podName)
+	return fmt.Errorf("Timeout Pod '%s'", podName)
 }
 
 func (c *K8SClient) GetPodsCount(namespace string) (int, error) {
 	ctx := context.TODO()
-	
+
 	pods, err := c.clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return 0, fmt.Errorf("не удалось получить список подов: %w", err)
+		return 0, fmt.Errorf("Couldn't get a list of pods: %w", err)
 	}
-	
+
 	return len(pods.Items), nil
 }

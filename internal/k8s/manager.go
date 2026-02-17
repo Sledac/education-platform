@@ -1,7 +1,10 @@
 package k8s
 
 import (
+	"fmt"
+	"k8s-connect/internal/config"
 	"log"
+	"sync"
 )
 
 type LabSession struct {
@@ -11,22 +14,27 @@ type LabSession struct {
 }
 
 type LabManager struct {
-	active_session map[string]*LabSession
-	Config *K8SClient
+	Sessions map[string]*LabSession
+	Client *K8SClient
+	Config *config.LabConfig
+	mu sync.RWMutex
 }
 
-var session = make(map[string]*LabSession)
+func NewLabManager(client *K8SClient, cfg *config.LabConfig) *LabManager {
+    return &LabManager{
+        Client:   client,
+		Config: cfg,
+        Sessions: make(map[string]*LabSession),
+    }
+}
 
-func CreateLabManager(user_id string , task_name string) (*LabManager,error) {
+func (mng *LabManager) CreateLabSession(user_id string , task_name string) (string,error) {
+	mng.mu.Lock()
+    defer mng.mu.Unlock()
 
-	client_set, err := InitClient()
+	ns, err := mng.Client.CreateNamespace(user_id)
 	if err != nil {
-		log.Fatal("Something is happed",err)
-	}
-	
-	ns, err := client_set.CreateNamespace(user_id)
-	if err != nil {
-		log.Fatalf("❌ Error: %v\n", err)
+		return "",fmt.Errorf("❌ Error: %v\n", err)
 	}
 	log.Println("✅ Namespace successfull create ")
     
@@ -35,17 +43,14 @@ func CreateLabManager(user_id string , task_name string) (*LabManager,error) {
 		Namespace: ns,
 		Task: task_name,
 	}
-	session[user_id]=newSession
+	mng.Sessions[user_id]=newSession
 
-	return &LabManager{active_session: session,Config: client_set},nil
-}
+	err = mng.DeployResourse(user_id)
 
-func(l *LabManager) GetCurrentTask (user_id string) (string, error) {
-
-	if _, exists := l.active_session[user_id]; !exists {
-		log.Fatal("The task is not available for the user %v", user_id)
-
+	if err != nil {
+		return "",fmt.Errorf("Error deloy Resourese: %w", err)
 	}
-	return l.active_session[user_id].Task, nil
+
+	return fmt.Sprintf("kubectl config set-context --current --namespace=%s", ns),nil
 
 }
