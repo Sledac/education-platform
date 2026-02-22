@@ -10,19 +10,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (mng *LabManager) DeployResourse(user_id string) error {
+func (mng *LabManager) DeployResourse(s *LabSession) error {
+	
+	//session := mng.Sessions[s.userID]
 
-	config_setup := mng.Config.Setup
+
+	config_setup := s.Task.Setup
 
 	switch {
-	case len(config_setup.Pods) > 0:
+	case len(s.Task.Setup.Pods) > 0:
 		pod := config_setup.Pods[0]
-		err := mng.Client.CreatePod(mng.Sessions[user_id].Namespace, pod.Name, pod.Image)
+		err := mng.Client.CreatePod(s.Namespace, pod.Name, pod.Image)
 		if err != nil {
 			return fmt.Errorf("Failed to create pod %s: %w", pod.Name, err)
 		} else {
-			log.Printf("\n. Ожидаем запуск пода...\n")
-			err = mng.Client.WaitForPodRunning(mng.Sessions[user_id].Namespace, pod.Name, 60)
+			log.Printf("\n. Waiting Pod Start...\n")
+			err = mng.Client.WaitForPodRunning(s.Namespace, pod.Name, 60)
 			if err != nil {
 				return fmt.Errorf("⚠️Error waiting Pod: %v", err)
 			}
@@ -34,10 +37,14 @@ func (mng *LabManager) DeployResourse(user_id string) error {
 
 func (mng *LabManager) Checker(user_id string) error {
 	var check_pods int
-	config_setup := mng.Config.Setup
+	mng.mu.RLock()
+	session := mng.Sessions[user_id]
+	mng.mu.RUnlock()
+
+	config_setup := mng.Config.Labs["lasbs"].Tasks[0].Setup
 
 	if len(config_setup.Pods) > 0 {
-		number_pods, err := mng.Client.GetPodsCount(mng.Sessions[user_id].Namespace)
+		number_pods, err := mng.Client.GetPodsCount(session.Namespace)
 		if err != nil {
 			log.Fatal("Error when getting pods")
 		}

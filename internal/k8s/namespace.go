@@ -44,16 +44,20 @@ func namespaceExists(clientset *kubernetes.Clientset, name string) (bool, error)
 	return true, nil
 }
 
-func (mng *LabManager) DeleteNamespace(user_id string) error {
+func (mng *LabManager) DeleteNamespace(s *LabSession) error {
 
-	ns := mng.Sessions[user_id].Namespace
-
-	err := mng.Client.clientset.CoreV1().Namespaces().Delete(context.TODO(), ns, metav1.DeleteOptions{})
+	err := mng.Client.clientset.CoreV1().Namespaces().Delete(context.TODO(), s.Namespace, metav1.DeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("Couldn't delete namespace '%s': %w", ns, err)
+		return fmt.Errorf("Couldn't delete namespace '%s': %w", s.Namespace, err)
 	}
-	fmt.Printf("✅ Namespace deleted: %s\n", ns)
 
+    fmt.Printf("✅ Namespace deleted: %s\n", s.Namespace)
+
+	mng.mu.Lock()
+	s.Namespace = "default"
+	mng.mu.Unlock()
+
+	
 	return nil
 
 }

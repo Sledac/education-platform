@@ -1,15 +1,45 @@
 {
-  "task": "count-pods",
-    "description": "Count running pods",
-    "setup": {
-      "pods":[
-      {
-        "name": "nginx", 
-        "image": "nginx:alpine"
-      }
-      ]
-    },
-    "validation": {
-      "value": 1
+    "labs": {
+        "lab1-basics": {
+            "title": "Знакомство с кластером",
+            "estimated_time": 15,
+            "tasks": [
+                {
+                    "id": "count-nodes",
+                    "title": "Количество нод",
+                    "description": "Выполните команду kubectl get nodes",
+                    "validation": {
+                        "type": "node-count",
+                        "expected":"2"
+                    }
+                },
+                {
+                    "id": "check-version",
+                    "title": "Версия Kubernetes",
+                    "description": "",
+                    "validation": {
+                        "type": "version-prefix",
+                        "expected": "v.29"
+                    }
+                },
+                {
+                    "id": "count-pods-nginx",
+                    "title": "Колличество nginx подов ",
+                    "description": "",
+                    "setup": {
+                        "pods":[
+                        {
+                            "name": "nginx", 
+                             "image": "nginx:alpine"
+                        }
+                        ]
+                    },
+                    "validation": {
+                        "type": "pod-count",
+                        "expected": "2"
+                    }
+                }
+            ]
+        }
     }
 }

@@ -13,21 +13,30 @@ func main() {
 		log.Fatalf("failed to initialize kubernetes client: %w", err)
 	}
 	cfg := config.Load()
+	mgr := k8s.NewLabManager(client_set, cfg)
 
-	mgr := k8s.NewLabManager(client_set,cfg)
+	session, err := mgr.CreateLabSession("user-test","lab1-basics")
 
-    CliLabSession, err := mgr.CreateLabSession("user-test","count-pods")
-	if err != nil {
-		log.Fatal("Can't create LabSession, '%v'", err)
+	for session.CurrentTaskIndex < len(mgr.Config.Labs["lab1-basics"].Tasks) {
+		session.Task = &mgr.Config.Labs["lab1-basics"].Tasks[session.CurrentTaskIndex]
+
+		err = mgr.ApplySetupForCurrentTask(session)
+		if err != nil {
+			log.Fatal("Cant apply Setup for task '%s': %w",session.Task.Title, err)
+		}
+		log.Printf("Connect to cluster use this command: kubectl config set-context --current --namespace=%s",
+    	session.Namespace)
+		log.Println(session.Task.Title)
+		log.Println(session.Task.Description)
+
+		if k8s.CheckCurrentTask(session) {
+			session.CurrentTaskIndex++
+	   		session.CompletedTasks = append(session.CompletedTasks, session.Task.ID)
+		}
+		if session.Namespace != "default"{
+			mgr.DeleteNamespace(session)
+		}		
+
 	}
-
-    log.Printf("Connect to cluser use this command '%s' \n",CliLabSession)
 	
-	mgr.Checker("user-test")
-	mgr.DeleteNamespace("user-test")
-
-
-	
-
-
 }
