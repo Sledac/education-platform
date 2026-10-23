@@ -8,7 +8,8 @@ import (
 )
 
 type Setup struct {
-	Pods []Pod `json:"pods"`
+	Namespace string `json:"namespace"`
+	Pods      []Pod  `json:"pods"`
 	// Можно позже добавить другие поля, если появятся:
 	// Services  []Service  `json:"services"`
 	// ConfigMaps []ConfigMap `json:"configmaps"`
@@ -28,26 +29,26 @@ type Pod struct {
 }
 
 type Lab struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Difficulty  string `json:"difficulty"`
-	EstimatedTime int  `json:"estimated_time"`
-	Tasks       []Task `json:"tasks"`
+	Title         string `json:"title"`
+	Description   string `json:"description"`
+	Difficulty    string `json:"difficulty"`
+	EstimatedTime int    `json:"estimated_time"`
+	Tasks         []Task `json:"tasks"`
 }
 
 type Task struct {
-	ID          string      `json:"id"`
-	Title       string      `json:"title"`
-	Description string      `json:"description"`
-    Setup       *Setup     `json:"setup,omitempty"`    // может отсутствовать
-	Validation  Validation  `json:"validation"`
+	ID          string     `json:"id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Setup       *Setup     `json:"setup,omitempty"` // может отсутствовать
+	Validation  Validation `json:"validation"`
 }
 
 type Validation struct {
-	Type        string `json:"type"`          // node-count, version-prefix, pod-count и т.д.
-	Expected    string `json:"expected"`      // может отсутствовать
-	ExpectedMin *int   `json:"expected_min"`  // может отсутствовать
-	Namespace   string `json:"namespace"`     // опционально, для pod-count
+	Type        string `json:"type"`         // node-count, version-prefix, pod-count и т.д.
+	Expected    string `json:"expected"`     // может отсутствовать
+	ExpectedMin *int   `json:"expected_min"` // может отсутствовать
+	Namespace   string `json:"namespace"`    // опционально, для pod-count
 	// можно добавить другие поля по мере появления новых типов валидации
 }
 
@@ -56,24 +57,23 @@ type LabRegistry struct {
 }
 
 var (
-    GlobalConfig *LabRegistry
-    once         sync.Once
+	GlobalConfig *LabRegistry
+	once         sync.Once
 )
 
-
 func Load() *LabRegistry {
-    once.Do(func() {
-        data, err := os.ReadFile("config1.json")
-        if err != nil {
-            log.Fatalf("Не удалось прочитать config.json: %v", err)
-        }
-        var cfg LabRegistry
-        if err := json.Unmarshal(data, &cfg); err != nil {
-            log.Fatalf("Не удалось распарсить config.json: %v", err)
-        }
+	once.Do(func() {
+		data, err := os.ReadFile("config.json")
+		if err != nil {
+			log.Fatalf("Не удалось прочитать config.json: %v", err)
+		}
+		var cfg LabRegistry
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			log.Fatalf("Не удалось распарсить config.json: %v", err)
+		}
 
-        GlobalConfig = &cfg
-    })
+		GlobalConfig = &cfg
+	})
 
-    return GlobalConfig
+	return GlobalConfig
 }

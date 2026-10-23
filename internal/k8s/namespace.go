@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -12,9 +13,9 @@ import (
 
 func (c *K8SClient) CreateNamespace(user_id string) (string, error) {
 
-	name := fmt.Sprintf("%s-%d", user_id, time.Now().Unix())
+	name := fmt.Sprintf("%s-%s-%d", "tenant", user_id, time.Now().Unix())
 
-	exists, err := namespaceExists(c.clientset, name)
+	exists, err := namespaceExists(c.Clientset, name)
 	if err != nil {
 		return name, fmt.Errorf("Verification error namespace: %w", err)
 	}
@@ -26,10 +27,12 @@ func (c *K8SClient) CreateNamespace(user_id string) (string, error) {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
-	_, err = c.clientset.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+	_, err = c.Clientset.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 	if err != nil {
 		return name, fmt.Errorf("Couldn't create namespace '%s': %w", name, err)
 	}
+
+	log.Printf("Succsefully create namespace %s", name)
 
 	return name, nil
 }
@@ -46,18 +49,17 @@ func namespaceExists(clientset *kubernetes.Clientset, name string) (bool, error)
 
 func (mng *LabManager) DeleteNamespace(s *LabSession) error {
 
-	err := mng.Client.clientset.CoreV1().Namespaces().Delete(context.TODO(), s.Namespace, metav1.DeleteOptions{})
+	err := mng.HostClient.Clientset.CoreV1().Namespaces().Delete(context.TODO(), s.Namespace, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Couldn't delete namespace '%s': %w", s.Namespace, err)
 	}
 
-    fmt.Printf("✅ Namespace deleted: %s\n", s.Namespace)
+	fmt.Printf("✅ Namespace deleted: %s\n", s.Namespace)
 
 	mng.mu.Lock()
 	s.Namespace = "default"
 	mng.mu.Unlock()
 
-	
 	return nil
 
 }

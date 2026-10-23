@@ -7,19 +7,19 @@
                 {
                     "id": "count-nodes",
                     "title": "Количество нод",
-                    "description": "Выполните команду kubectl get nodes",
+                    "description": "Выполните команду kubectl get nodes в текущем namespace",
                     "validation": {
                         "type": "node-count",
-                        "expected":"2"
+                        "expected":"1"
                     }
                 },
                 {
-                    "id": "check-version",
-                    "title": "Версия Kubernetes",
-                    "description": "",
+                    "id": "check-pods",
+                    "title": "Колличество подов",
+                    "description": "Выполните команду kubectl get pods в текущем namespace",
                     "validation": {
-                        "type": "version-prefix",
-                        "expected": "v.29"
+                        "type": "pod-count",
+                        "expected": "0"
                     }
                 },
                 {
@@ -27,6 +27,7 @@
                     "title": "Колличество nginx подов ",
                     "description": "",
                     "setup": {
+                        "namespace": "default",
                         "pods":[
                         {
                             "name": "nginx", 
@@ -36,7 +37,7 @@
                     },
                     "validation": {
                         "type": "pod-count",
-                        "expected": "2"
+                        "expected": "1"
                     }
                 }
             ]
