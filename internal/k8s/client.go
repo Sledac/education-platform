@@ -2,16 +2,15 @@ package k8s
 
 import (
 	"fmt"
-	"path/filepath"
-
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+	"path/filepath"
 )
 
-
 type K8SClient struct {
-    clientset *kubernetes.Clientset
+	Clientset *kubernetes.Clientset
+	Flags     *genericclioptions.ConfigFlags
 }
 
 func InitClient() (*K8SClient, error) {
@@ -20,15 +19,19 @@ func InitClient() (*K8SClient, error) {
 		kubeconfig = filepath.Join(home, ".kube", "config")
 	}
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	flags := genericclioptions.NewConfigFlags(true)
+	flags.KubeConfig = &kubeconfig
+
+	config, err := flags.ToRESTConfig()
 	if err != nil {
 		return nil, fmt.Errorf("Download error kubeconfig: %w", err)
 	}
-	
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("client creation error: %w", err)
 	}
-	
-	return &K8SClient{clientset: clientset}, nil
+
+	return &K8SClient{Clientset: clientset, Flags: flags}, nil
+
 }

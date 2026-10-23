@@ -11,21 +11,18 @@ import (
 )
 
 func (mng *LabManager) DeployResourse(s *LabSession) error {
-	
-	//session := mng.Sessions[s.userID]
-
 
 	config_setup := s.Task.Setup
 
 	switch {
 	case len(s.Task.Setup.Pods) > 0:
 		pod := config_setup.Pods[0]
-		err := mng.Client.CreatePod(s.Namespace, pod.Name, pod.Image)
+		err := s.TenantClient.CreatePod(config_setup.Namespace, pod.Name, pod.Image)
 		if err != nil {
 			return fmt.Errorf("Failed to create pod %s: %w", pod.Name, err)
 		} else {
 			log.Printf("\n. Waiting Pod Start...\n")
-			err = mng.Client.WaitForPodRunning(s.Namespace, pod.Name, 60)
+			err = s.TenantClient.WaitForPodRunning(config_setup.Namespace, pod.Name, 60)
 			if err != nil {
 				return fmt.Errorf("⚠️Error waiting Pod: %v", err)
 			}
@@ -44,7 +41,7 @@ func (mng *LabManager) Checker(user_id string) error {
 	config_setup := mng.Config.Labs["lasbs"].Tasks[0].Setup
 
 	if len(config_setup.Pods) > 0 {
-		number_pods, err := mng.Client.GetPodsCount(session.Namespace)
+		number_pods, err := mng.HostClient.GetPodsCount(session.Namespace)
 		if err != nil {
 			log.Fatal("Error when getting pods")
 		}
@@ -59,7 +56,6 @@ func (mng *LabManager) Checker(user_id string) error {
 }
 
 func (c *K8SClient) CreatePod(namespace, podName, image string) error {
-	// Создаем объект Pod
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
@@ -85,9 +81,8 @@ func (c *K8SClient) CreatePod(namespace, podName, image string) error {
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
 	}
-
 	ctx := context.TODO()
-	_, err := c.clientset.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
+	_, err := c.Clientset.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("не удалось создать pod '%s': %w", podName, err)
 	}
@@ -101,7 +96,7 @@ func (c *K8SClient) WaitForPodRunning(namespace, podName string, timeoutSeconds 
 	ctx := context.TODO()
 
 	for i := 0; i < timeoutSeconds; i++ {
-		pod, err := c.clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		pod, err := c.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("ошибка получения pod: %w", err)
 		}
@@ -131,7 +126,7 @@ func (c *K8SClient) WaitForPodRunning(namespace, podName string, timeoutSeconds 
 func (c *K8SClient) GetPodsCount(namespace string) (int, error) {
 	ctx := context.TODO()
 
-	pods, err := c.clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	pods, err := c.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return 0, fmt.Errorf("Couldn't get a list of pods: %w", err)
 	}
